@@ -1,0 +1,43 @@
+name: Visa Status Checker
+
+on:
+  schedule:
+    # Ejecutar cada 5 minutos (ajusta según tus necesidades)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  check-visa:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4
+        
+    - name: Run visa checker
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        CHECK_INTERVAL: "60"  # Solo 1 minuto ya que se ejecuta cada 5 min
+        COUNTRY: "Spain"
+      run: |
+        # Ejecutar solo una vez (no loop infinito)
+        timeout 120 python checkVisa.py || true
+        
+    - name: Commit state file changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add visa_status_state.json || true
+        git commit -m "Update visa status state" || true
+        git push || true
